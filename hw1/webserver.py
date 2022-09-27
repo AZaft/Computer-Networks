@@ -11,6 +11,8 @@ print("Server is listening on port: " + str(PORT))
 while True:
     connectionSocket, addr = serverSocket.accept()
     request = connectionSocket.recv(1024).decode()
+
+    print(request)
     
     #parsing http request
     fields = request.split('\r\n', 1)
@@ -20,16 +22,15 @@ while True:
     #if its not a get request or file is not found send 404 not found 
     response = 'HTTP/1.1 404 Not Found\n\n'
     if (requestInfo[0] == 'GET'):
-        try:
-            file = open(requestInfo[1][1:])
-            response = 'HTTP/1.1 200 OK\n\n' + file.read()
-            file.close()
-        except:
-            #file was not found
-            pass
+        
+        print(requestInfo[1][1:])
+        file = open(requestInfo[1][1:],"rb")
+        response = f'HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nAccept-Ranges: bytes\n\n'.encode() + file.read()
+        file.close()
+        #
 
 
-    connectionSocket.send(response.encode())
+    connectionSocket.send(response)
     connectionSocket.close()
 
 serverSocket.close()
