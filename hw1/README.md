@@ -11,7 +11,7 @@ localhost:6789/HelloWorld.html return html file successfully
 
 localhost:6789/sbu.jpg return jpg file successfully
 
-localhost:6789/test/seawolf.png return jpg file successfully
+localhost:6789/test/seawolf.png return png file successfully
 
 localhost:6789/doesnotexist.html returned 404 successfully
 
