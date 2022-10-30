@@ -20,4 +20,5 @@ The following files/images were tested and returned image successfully and reque
 http://localhost:8888/http://gaia.cs.umass.edu/wireshark-labs/HTTP-wireshark-file2.html
 http://localhost:8888/http://gaia.cs.umass.edu/wireshark-labs/HTTP-wireshark-file3.html
 http://localhost:8888/https://www.bravofurniture.net/images/catalog_icons/27.jpg  
+http://localhost:8888/https://png.pngtree.com/png-vector/20210119/ourmid/pngtree-3d-alphabet-small-c-png-image_2764190.png
 
