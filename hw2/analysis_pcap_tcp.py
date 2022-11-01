@@ -19,10 +19,10 @@ receiver = '128.208.2.198'
 
 transactions = {}
 
+total_sent = 0
+response_received = False
+
 for time, buf in pcap:
-
-    
-
     #read bytes into objects using dpkt
     eth = dpkt.ethernet.Ethernet(buf)
     ip = eth.data
@@ -55,7 +55,7 @@ for time, buf in pcap:
 
     #if SYN add flow to tcp_flows
     if is_syn:
-        flow = [2, tcp.sport, source_ip, tcp.dport, dest_ip, 0]
+        flow = [2, tcp.sport, source_ip, tcp.dport, dest_ip, 0, [], 0, 0]
 
         #don't add to tcp_flows if duplicate flow
         dup = False
@@ -73,20 +73,23 @@ for time, buf in pcap:
         for f in range(len(tcp_flows)):
             flow = tcp_flows[f]
 
-            if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow and flow[0] > 0: 
+            if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
 
-                id = str(f+1) + ":" + str(flow[0])
+                if flow[0] > 0:
+                    id = str(f+1) + ":" + str(flow[0])
 
-                transactions[ id ] = {
-                    "sent": {
-                        "SPORT": tcp.sport,
-                        "SEQ": tcp.seq,
-                        "ACK": tcp.ack,
-                        "WIN": tcp.win
+                    transactions[ id ] = {
+                        "sent": {
+                            "SPORT": tcp.sport,
+                            "SEQ": tcp.seq,
+                            "ACK": tcp.ack,
+                            "WIN": tcp.win
+                        }
                     }
-                }
 
-                flow[0] -= 1
+                    flow[0] -= 1
+
+    
 
     #get responses of first two sends of each flow based on sequence and ack numbers
     #use source port/destination port to determine response is for the right flows
@@ -104,21 +107,38 @@ for time, buf in pcap:
 
 
     #calculate total data sent for each flow (througput)
-    if is_ack and source_ip == sender and len(tcp) > 0 and not is_syn:
+    if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn and not is_fin:
         for f in tcp_flows:
             if tcp.sport in f and tcp.dport in f and source_ip in f and dest_ip in f:
                 f[5] += len(tcp)
 
 
-    old_time = time
 
+
+    #calculate how many times triple duplicates are sent to the receiver for each flow
+    if is_ack and source_ip == receiver and not is_syn and not is_fin:
+         for f in range(len(tcp_flows)):
+            flow = tcp_flows[f]
+            if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow : 
+                if tcp.ack == flow[8]:
+                    flow[6].append(tcp.ack)
+
+                else: 
+                    if len(flow[6]) >= 3:
+                        flow[7] += 1
+                        flow[6] = []
+
+                flow[8] = tcp.ack
 
 
     
 
+    old_time = time    
+
 #print tcp_flows in readable format
 print(tcp_flows)
 print(transactions)
+print(total_sent)
 for i in range(len(tcp_flows)):
     print("FLOW #" + str(i+1) + ":")
     print("   Source port: " + str(tcp_flows[i][1]))
@@ -145,6 +165,9 @@ for i in range(len(tcp_flows)):
     
     #print throughput
     print("SENDER THROUGHPUT: " + str(tcp_flows[i][5]))
+
+    #print timeouts from triple duplicate acks
+    print("TRIPLE DUPLICATE TIMEOUTS: " + str(tcp_flows[i][7]))
 
     
 

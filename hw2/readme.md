@@ -16,7 +16,7 @@ Then I find the responses to these requests from the receiver using sequence and
 transactions are stored in dictionary object organized by flows.
 
 To find throughput:
-I check total data sent from the sender (source_ip == sender) including size of headers using len(tcp) for each flow for the duration of the flow.
+I check total data sent from the sender (source_ip == sender) including size of headers using len(tcp) for each flow for the duration of the flow; I did not include packets where payload was 0 (len(tcp.data)).
 
 ### Part B
 
