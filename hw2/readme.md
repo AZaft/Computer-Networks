@@ -11,8 +11,8 @@ There are comments throughout the code that explain each general step in what I 
 To find number of flows, I check the tcp SYN flags and find flows from sender to receiver; there were 3.
 
 To find the first two transactions for each flow:
-I first find the first two transactions sent from sender that aren't part of the handshake using tcp object, and source_ip.
-Then I find the responses to these requests from the receiver using sequence and ack values.
+I first find the first two transactions sent from sender that aren't part of the handshake using data from tcp object.
+Then I find the responses to these requests from the receiver using sequence and ack values; I also make sure source/dest ports match up to make sure responses are for the right flow when doing this.
 transactions are stored in dictionary object organized by flows.
 
 To find throughput:

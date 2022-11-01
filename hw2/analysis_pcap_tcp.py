@@ -68,7 +68,7 @@ for time, buf in pcap:
     
 
     #get first two sends with real data
-    if is_ack and source_ip == sender and len(tcp.data) > 0:
+    if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn:
         #find for what flow this ack belongs to and append transaction (done only twice for each flow)
         for f in range(len(tcp_flows)):
             flow = tcp_flows[f]
@@ -79,40 +79,46 @@ for time, buf in pcap:
 
                 transactions[ id ] = {
                     "sent": {
+                        "SPORT": tcp.sport,
                         "SEQ": tcp.seq,
                         "ACK": tcp.ack,
-                        "WIN:": tcp.win
+                        "WIN": tcp.win
                     }
                 }
 
                 flow[0] -= 1
 
     #get responses of first two sends of each flow based on sequence and ack numbers
-    if is_ack and source_ip == receiver:
+    #use source port/destination port to determine response is for the right flows
+    if is_ack and source_ip == receiver and not is_syn:
         for key in transactions:
             t = transactions[key]
-            if t["sent"]["ACK"] == tcp.seq:
+            if t["sent"]["SEQ"] < tcp.ack and t["sent"]["SPORT"] == tcp.dport:
                 if "received" not in t:
                     res = {
                         "SEQ": tcp.seq,
                         "ACK": tcp.ack,
-                        "WIN:": tcp.win
+                        "WIN": tcp.win
                     }
                     t["received"] = res
 
 
     #calculate total data sent for each flow (througput)
-    if is_ack and source_ip == sender and len(tcp) > 0:
+    if is_ack and source_ip == sender and len(tcp) > 0 and not is_syn:
         for f in tcp_flows:
             if tcp.sport in f and tcp.dport in f and source_ip in f and dest_ip in f:
                 f[5] += len(tcp)
 
 
     old_time = time
+
+
+
     
 
 #print tcp_flows in readable format
 print(tcp_flows)
+print(transactions)
 for i in range(len(tcp_flows)):
     print("FLOW #" + str(i+1) + ":")
     print("   Source port: " + str(tcp_flows[i][1]))
@@ -123,14 +129,19 @@ for i in range(len(tcp_flows)):
     #print transaction information
     print("FIRST TWO TRANSACTIONS:")
 
-    for j in range(2):
+    print("   SENT: ")
+
+    for j in range(1, -1, -1):
         id = str(i+1) + ":" + str(j+1)
         transaction = transactions[id]
-        print("   SENT: " + str(transaction["sent"]))
-    for j in range(2):
+        print("     SEQ: " + str(transaction["sent"]["SEQ"]) + ", ACK: " +  str(transaction["sent"]["ACK"]) + ", WINDOW: " +  str(transaction["sent"]["WIN"]) )
+
+    print("   RECEIVED: ")
+
+    for j in range(1, -1, -1):
         id = str(i+1) + ":" + str(j+1)
         transaction = transactions[id]
-        print("   RECEIVED: " + str(transaction["received"]))
+        print("     SEQ: " + str(transaction["received"]["SEQ"]) + ", ACK: " +  str(transaction["received"]["ACK"]) + ", WINDOW: " +  str(transaction["received"]["WIN"]) )
     
     #print throughput
     print("SENDER THROUGHPUT: " + str(tcp_flows[i][5]))
