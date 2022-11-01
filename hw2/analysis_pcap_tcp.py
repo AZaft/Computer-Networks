@@ -22,6 +22,12 @@ transactions = {}
 total_sent = 0
 response_received = False
 
+#Array to hold congestion windows for first three request; boolean is for if there was a response yet (helper)
+congestion_windows = [[0, False],[0, False],[0, False]]
+
+rtt = 0
+requests_sent = {}
+
 for time, buf in pcap:
     #read bytes into objects using dpkt
     eth = dpkt.ethernet.Ethernet(buf)
@@ -72,24 +78,23 @@ for time, buf in pcap:
         #find for what flow this ack belongs to and append transaction (done only twice for each flow)
         for f in range(len(tcp_flows)):
             flow = tcp_flows[f]
+            id = str(f+1) + ":" + str(flow[0])
 
             if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
-
+                
                 if flow[0] > 0:
-                    id = str(f+1) + ":" + str(flow[0])
-
                     transactions[ id ] = {
                         "sent": {
                             "SPORT": tcp.sport,
                             "SEQ": tcp.seq,
                             "ACK": tcp.ack,
                             "WIN": tcp.win
-                        }
+                        },
                     }
-
                     flow[0] -= 1
+                    
+            #if not congestion_windows[f][1]: congestion_windows[f][0] += 1
 
-    
 
     #get responses of first two sends of each flow based on sequence and ack numbers
     #use source port/destination port to determine response is for the right flows
@@ -97,6 +102,7 @@ for time, buf in pcap:
         for key in transactions:
             t = transactions[key]
             if t["sent"]["SEQ"] < tcp.ack and t["sent"]["SPORT"] == tcp.dport:
+                
                 if "received" not in t:
                     res = {
                         "SEQ": tcp.seq,
@@ -104,6 +110,7 @@ for time, buf in pcap:
                         "WIN": tcp.win
                     }
                     t["received"] = res
+                    #congestion_windows[int(key[0:1]) - 1][1] = True
 
 
     #calculate total data sent for each flow (througput)
@@ -131,13 +138,25 @@ for time, buf in pcap:
                 flow[8] = tcp.ack
 
 
+    #calculate how many requests are sent in between each response
     
+    if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn:
+        for f in range(len(tcp_flows)):
+            flow = tcp_flows[f]
+            if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
+                if f in requests_sent:
+                    requests_sent[f][0] += 1
+                else:
+                    requests_sent[f] = [0,0,0]
+        
 
+    
     old_time = time    
 
 #print tcp_flows in readable format
 print(tcp_flows)
 print(transactions)
+print(requests_sent)
 print(total_sent)
 for i in range(len(tcp_flows)):
     print("FLOW #" + str(i+1) + ":")
