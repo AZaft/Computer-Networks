@@ -19,16 +19,16 @@ receiver = '128.208.2.198'
 
 transactions = {}
 
-total_sent = 0
-response_received = False
 
-#Array to hold congestion windows for first three request; boolean is for if there was a response yet (helper)
-congestion_windows = [[0, False],[0, False],[0, False]]
-
-rtt = 0
 requests_sent = {}
+requests_received = {}
+
+#holds rtt for each request split by flow
+rtt = {0:[], 1:[], 2:[]}
+
 
 for time, buf in pcap:
+
     #read bytes into objects using dpkt
     eth = dpkt.ethernet.Ethernet(buf)
     ip = eth.data
@@ -138,26 +138,114 @@ for time, buf in pcap:
                 flow[8] = tcp.ack
 
 
-    #calculate how many requests are sent in between each response
-    
-    if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn:
+    #record first 3 requests sent for each flow in object (requests_sent)
+    if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn and not is_fin:
         for f in range(len(tcp_flows)):
             flow = tcp_flows[f]
             if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
+                expected_ack = tcp.seq + len(tcp.data)
+                currentRequest = {
+                    "expected": expected_ack,
+                    "SEQ": tcp.seq,
+                    "ACK": tcp.ack,
+                    "TIME": time
+                }
+
                 if f in requests_sent:
-                    requests_sent[f][0] += 1
+                    if len(requests_sent[f][0]) < 3:
+                        requests_sent[f][0].append(currentRequest)
                 else:
-                    requests_sent[f] = [0,0,0]
+                    requests_sent[f] = [[currentRequest], 1]
+
+                
+    
+    # capture 3 responses for the above requests (requests_sent) for each flow in object and record rtt for each
+    if is_ack and source_ip == receiver and not is_syn and not is_fin:
+        for r in requests_sent:
+            flow_requests = requests_sent[r][0]
         
+            for request in flow_requests:
+                #corresponding ack found
+                if tcp.ack >= request["expected"]:
+                    currentRequest = {
+                        "SEQ": tcp.seq,
+                        "ACK": tcp.ack,
+                        "TIME": time
+                    }
+                    
+                    if r in requests_received: 
+                        if len(requests_received[r]) < 3:
+                            rtt[r].append(time - request["TIME"])
+                            requests_received[r].append(currentRequest)
+                    else:
+                        rtt[r].append(time - request["TIME"])
+                        requests_received[r] = [currentRequest]
 
     
+
     old_time = time    
 
+
+#Array to hold congestion windows for first three request
+congestion_windows = [[0,0,0],[0,0,0],[0,0,0]]
+
+#helper to check when rtt is over
+end_times = [[0,0,0],[0,0,0],[0,0,0]]
+congestion_index = [0,0,0]
+
+f = open('assignment2.pcap', 'rb')
+pcap = dpkt.pcap.Reader(f)
+
+for time, buf in pcap:
+    
+    eth = dpkt.ethernet.Ethernet(buf)
+    ip = eth.data
+    tcp = ip.data
+    source_ip = '.'.join(f'{c}' for c in ip.src)
+    dest_ip = '.'.join(f'{c}' for c in ip.dst)
+    request_time = time - old_time
+    is_syn = False
+    is_fin = False
+    is_ack = False
+    if tcp.flags & dpkt.tcp.TH_SYN: is_syn = True
+    if tcp.flags & dpkt.tcp.TH_FIN: is_fin = True
+    if tcp.flags & dpkt.tcp.TH_ACK: is_ack = True
+
+    if is_ack and source_ip == sender and len(tcp.data) and not is_syn:
+        for f in range(len(tcp_flows)):
+            flow = tcp_flows[f]
+            if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
+                cwnd = congestion_windows[f]
+                end = end_times[f]
+                i = congestion_index[f]
+
+                if i >= 3: continue
+
+                
+                
+                if not cwnd[i]:
+                    end[i] = rtt[f][i] + time
+                    cwnd[i] += 1
+                        
+
+                
+                if cwnd[i] and end[i]:
+                    if end[i]:
+                        if end[i] >= time:
+                            cwnd[i] += 1
+                        else: congestion_index[f] += 1
+                
+               
+# print(tcp_flows)
+# print(transactions)
+# print(requests_sent)
+# print(requests_received)
+# print(rtt)
+# print(rtt)
+# print(congestion_windows)
+
+
 #print tcp_flows in readable format
-print(tcp_flows)
-print(transactions)
-print(requests_sent)
-print(total_sent)
 for i in range(len(tcp_flows)):
     print("FLOW #" + str(i+1) + ":")
     print("   Source port: " + str(tcp_flows[i][1]))
@@ -185,9 +273,12 @@ for i in range(len(tcp_flows)):
     #print throughput
     print("SENDER THROUGHPUT: " + str(tcp_flows[i][5]))
 
-    #print timeouts from triple duplicate acks
-    print("TRIPLE DUPLICATE TIMEOUTS: " + str(tcp_flows[i][7]))
+    #print first three congestion windows from flow
+    print("FIRST THREE CONGESTION WINDOWS: " + str(congestion_windows[i]))
 
-    
+    #print timeouts from triple duplicate acks
+    print("TRIPLE DUPLICATE ACK RETRANSMISSIONS: " + str(tcp_flows[i][7]))
+
+   
 
     print("\n")

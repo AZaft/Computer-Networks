@@ -20,4 +20,13 @@ I check total data sent from the sender (source_ip == sender) including size of 
 
 ### Part B
 
+To find the first three congestion windows:
+I calculated the rtt of the first three requests for each flow using requests_sent object which tracked time of the first three requests sent and requests_received object which tracked time at which the reponses of those three requests arrived. Using rtts for each request, I did a second loop of the packets and counted how many requests were sent within the first three rtts for the three congestion windows for each flow.
+
+To find timeout by duplicate acks, I used an an element in my tcp_flows object to keep track of consecutive duplicate acks that were received for each flow. I also kept a variable in the data object
+that kept a count of timeout by duplicate acks that was incremented anytime more than 3 duplicate acks were received for each flow consecutively.
+
+
+
+
 
