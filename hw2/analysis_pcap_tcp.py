@@ -22,11 +22,10 @@ transactions = {}
 total_sent = 0
 response_received = False
 
-#Array to hold congestion windows for first three request; boolean is for if there was a response yet (helper)
-congestion_windows = [[0, False],[0, False],[0, False]]
+#Dict to hold congestion windows for first three request and a boolean for if there was a response yet (helper)
+congestion_windows = {}
 
-rtt = 0
-requests_sent = {}
+rtt = {}
 
 for time, buf in pcap:
     #read bytes into objects using dpkt
@@ -139,16 +138,33 @@ for time, buf in pcap:
 
 
     #calculate how many requests are sent in between each response
-    
-    if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn:
-        for f in range(len(tcp_flows)):
-            flow = tcp_flows[f]
-            if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
-                if f in requests_sent:
-                    requests_sent[f][0] += 1
-                else:
-                    requests_sent[f] = [0,0,0]
-        
+    # if is_ack and source_ip == sender and len(tcp.data) > 0 and not is_syn:
+    #     for f in range(len(tcp_flows)):
+    #         flow = tcp_flows[f]
+            
+    #         if tcp.sport in flow and tcp.dport in flow and source_ip in flow and dest_ip in flow: 
+                
+    #             if f in congestion_windows:
+    #                 cwnd = congestion_windows[f]
+
+                    
+    #                 if(cwnd[1] >= 0):
+    #                     cwnd[2][cwnd[1]] = False
+    #                     cwnd[1] -= 1
+    #             else:
+    #                 congestion_windows[f] = [[1,1,1],2, [True, True, True]]
+
+    #             for k in congestion_windows:
+    #                 cwnd = congestion_windows[k]
+    #                 request_response_status = cwnd[2]
+    #                 r_counts = cwnd[0]
+
+    #                 for i in range(3):
+    #                     if not request_response_status[i]: r_counts[i] += 1
+
+
+    #capture responses for the three requests to
+
 
     
     old_time = time    
@@ -156,7 +172,7 @@ for time, buf in pcap:
 #print tcp_flows in readable format
 print(tcp_flows)
 print(transactions)
-print(requests_sent)
+print(congestion_windows)
 print(total_sent)
 for i in range(len(tcp_flows)):
     print("FLOW #" + str(i+1) + ":")

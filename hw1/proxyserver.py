@@ -17,8 +17,16 @@ def sendRequest(url):
         request = f"GET /{path} HTTP/1.1\r\nHost:{host}\r\n\r\n"
         clientSocket.send(request.encode())
 
+        response = ""
         #response from server
-        response = clientSocket.recv(64000)
+        while True:
+            responseBuf = clientSocket.recv(1024)
+            print(responseBuf)
+            response += responseBuf
+            if not responseBuf: break
+
+        print(response)
+
         clientSocket.close()
         return response
     except:
