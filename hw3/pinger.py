@@ -50,7 +50,15 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         #Fill in start
 
         #Fetch the ICMP header from the IP packet
-        return 50
+        total_bytes = len(recPacket)
+        icmp_header = recPacket[20:28]
+        type, code, checksum, identifier, seq  = struct.unpack("bbHHh",icmp_header)
+
+        #if its an echo reply type and code
+        if type == 0 and code == 0:
+            
+            print_info = f"Total bytes: {total_bytes}, Type: {type}, Code: {code}, Checksum: {checksum}, identifier: {identifier}, seq: {seq}"
+            return print_info
 
         #Fill in end
 

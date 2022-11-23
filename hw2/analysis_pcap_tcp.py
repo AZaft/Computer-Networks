@@ -20,19 +20,12 @@ receiver = '128.208.2.198'
 transactions = {}
 
 
-<<<<<<< HEAD
-#Dict to hold congestion windows for first three request and a boolean for if there was a response yet (helper)
-congestion_windows = {}
-
-rtt = {}
-=======
 requests_sent = {}
 requests_received = {}
 
 #holds rtt for each request split by flow
 rtt = {0:[], 1:[], 2:[]}
 
->>>>>>> 3e251219b0dfff871dbca55ba1f282b0d205f3e8
 
 for time, buf in pcap:
 
