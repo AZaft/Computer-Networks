@@ -2,7 +2,8 @@
 
 ## Running program
 
-The program can be run in the terminal with the command "python analysis_pcap_tcp.py" depending on the python installation. Library dpkt must also be installed (pip install dpkt). The HW was completed in python version 3.10.8.
+The program can be run in the terminal with the command "python analysis_pcap_tcp.py" depending on the python installation. Library dpkt must also be installed (pip install dpkt). The HW was completed in python version 3.10.8. The pcap file 
+named "assignment2.pcap" must be in the same directory when running the program.
 
 ## High level summary
 There are comments throughout the code that explain each general step in what I do

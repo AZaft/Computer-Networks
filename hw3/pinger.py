@@ -54,10 +54,24 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         icmp_header = recPacket[20:28]
         type, code, checksum, identifier, seq  = struct.unpack("bbHHh",icmp_header)
 
+        time_sent = struct.unpack("d", recPacket[28:36])
+
+        #multiply by 1000 to get ms
+        current_rtt = (timeReceived - time_sent[0])*1000
+
+        #update min, max, sum of rtts
+        if(current_rtt > rtt_max):
+            rtt_max = current_rtt
+
+        if(current_rtt < rtt_min):
+            rtt_min = current_rtt
+
+        rtt_sum += current_rtt
+
         #if its an echo reply type and code
+        #returning formatted string so info is printed every second for each request
         if type == 0 and code == 0:
-            
-            print_info = f"Total bytes: {total_bytes}, Type: {type}, Code: {code}, Checksum: {checksum}, identifier: {identifier}, seq: {seq}"
+            print_info = f"{total_bytes} bytes from {destAddr}; time={current_rtt} ms"
             return print_info
 
         #Fill in end
@@ -122,10 +136,12 @@ def ping(host, timeout=1):
             print(doOnePing(dest, timeout))
             time.sleep(1)
     except KeyboardInterrupt:
-        print("TODO")
          #Fill in start
-    
+
         #Calculate Statistics here
+        rtt_average = rtt_sum / cnt
+        rtt_info = f"round-trip min/avg/max {rtt_min}/{rtt_average}/{rtt_max} ms"
+        print(rtt_info)
 
         #Fill in end
         
