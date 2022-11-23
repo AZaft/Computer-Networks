@@ -62,16 +62,15 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         #update min, max, sum of rtts
         if(current_rtt > rtt_max):
             rtt_max = current_rtt
-
         if(current_rtt < rtt_min):
             rtt_min = current_rtt
-
         rtt_sum += current_rtt
 
         #if its an echo reply type and code
         #returning formatted string so info is printed every second for each request
+        #round rtt to 1 decimal places for printout
         if type == 0 and code == 0:
-            print_info = f"{total_bytes} bytes from {destAddr}; time={current_rtt} ms"
+            print_info = f"{total_bytes} bytes from {destAddr}; time={round(current_rtt, 1)} ms"
             return print_info
 
         #Fill in end
@@ -139,8 +138,10 @@ def ping(host, timeout=1):
          #Fill in start
 
         #Calculate Statistics here
+
         rtt_average = rtt_sum / cnt
-        rtt_info = f"round-trip min/avg/max {rtt_min}/{rtt_average}/{rtt_max} ms"
+        #round values to 3 decimal places for printout
+        rtt_info = f"round-trip min/avg/max {round(rtt_min,3)}/{round(rtt_average,3)}/{round(rtt_max,3)} ms"
         print(rtt_info)
 
         #Fill in end
